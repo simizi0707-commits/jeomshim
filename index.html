@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>오늘 뭐 먹지?</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍽️</text></svg>" />
+  <style>
+    /* ===== 색상 설정 (학생 수정 가능: 원하는 색으로 바꿔 보세요) ===== */
+    :root {
+      --bg: #fff8e7;          /* 크림색 배경 */
+      --card: #ffffff;        /* 카드 배경 */
+      --point: #ffd23f;       /* 노랑 포인트 */
+      --point-dark: #f5b700;  /* 진한 노랑 (테두리, 그림자) */
+      --text: #4a3b2a;        /* 기본 글자색 */
+      --text-soft: #8a7660;   /* 흐린 글자색 */
+      --line: #f1e3c2;        /* 연한 테두리 */
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif;
+      line-height: 1.5;
+      display: flex;
+      justify-content: center;
+      padding: 40px 16px;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 560px;
+      text-align: center;
+    }
+
+    /* ----- 제목 영역 ----- */
+    h1 {
+      font-size: clamp(2rem, 7vw, 2.6rem);
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    .intro {
+      font-size: 1.05rem;
+      color: var(--text-soft);
+      margin-bottom: 28px;
+      word-break: keep-all;
+    }
+
+    /* ----- 음식 종류 버튼 ----- */
+    .categories {
+      display: flex;
+      flex-wrap: wrap;           /* 화면이 좁으면 자연스럽게 줄바꿈 */
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+
+    .category-btn {
+      font: inherit;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+      background: var(--card);
+      border: 2px solid var(--line);
+      border-radius: 999px;
+      padding: 10px 18px;
+      min-height: 44px;
+      cursor: pointer;
+      transition: transform 0.15s, background 0.15s, border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .category-btn:hover { transform: translateY(-2px); border-color: var(--point); }
+
+    /* 선택된 버튼: 노랑 배경 + 진한 테두리 + 그림자 */
+    .category-btn.active {
+      background: var(--point);
+      border-color: var(--point-dark);
+      box-shadow: 0 4px 0 var(--point-dark);
+      transform: translateY(-2px);
+    }
+
+    .category-btn:focus-visible,
+    .main-btn:focus-visible {
+      outline: 3px solid var(--text);
+      outline-offset: 3px;
+    }
+
+    /* ----- 추천받기 / 다시 추천 버튼 ----- */
+    .main-btn {
+      font: inherit;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text);
+      background: var(--point);
+      border: none;
+      border-radius: 20px;
+      padding: 16px 28px;
+      width: 100%;
+      max-width: 340px;
+      min-height: 56px;
+      cursor: pointer;
+      box-shadow: 0 6px 0 var(--point-dark);
+      transition: transform 0.1s, box-shadow 0.1s;
+    }
+
+    .main-btn:hover { transform: translateY(-1px); }
+    .main-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--point-dark); }
+
+    .main-btn.secondary {
+      background: var(--card);
+      border: 2px solid var(--point-dark);
+      box-shadow: 0 4px 0 var(--point-dark);
+      margin-top: 20px;
+    }
+
+    .hidden { display: none; }
+
+    /* ----- 결과 카드 ----- */
+    .result-card {
+      background: var(--card);
+      border: 3px solid var(--line);
+      border-radius: 28px;
+      padding: 36px 24px;
+      margin-top: 32px;
+      min-height: 240px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 10px 30px rgba(180, 140, 40, 0.12);
+    }
+
+    .result-emoji {
+      font-size: 5rem;
+      line-height: 1.1;
+      margin-bottom: 12px;
+    }
+
+    .result-tag {
+      display: inline-block;
+      background: var(--bg);
+      color: var(--text-soft);
+      font-size: 0.9rem;
+      font-weight: 600;
+      border-radius: 999px;
+      padding: 4px 12px;
+      margin-bottom: 8px;
+    }
+
+    .result-name {
+      font-size: 1.8rem;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    .result-desc {
+      font-size: 1.05rem;
+      color: var(--text-soft);
+      word-break: keep-all;
+    }
+
+    .placeholder {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--text-soft);
+      word-break: keep-all;
+    }
+
+    /* 결과가 나타날 때 통통 튀는 애니메이션 */
+    .pop { animation: pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+    @keyframes pop {
+      0%   { opacity: 0; transform: scale(0.85) translateY(10px); }
+      100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    /* 움직임 줄이기 설정을 켠 사용자에게는 애니메이션 끄기 */
+    @media (prefers-reduced-motion: reduce) {
+      .pop { animation: none; }
+      * { transition: none !important; }
+    }
+
+    /* ----- 모바일 화면 ----- */
+    @media (max-width: 480px) {
+      body { padding: 28px 16px; }
+      .category-btn { padding: 10px 16px; font-size: 1rem; }
+      .result-card { padding: 28px 18px; }
+      .result-emoji { font-size: 4.2rem; }
+      .result-name { font-size: 1.6rem; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <h1>오늘 뭐 먹지? 🍽️</h1>
+    <p class="intro">음식 종류를 고르면 오늘의 점심을 추천해 드려요.</p>
+
+    <!-- 음식 종류 버튼은 JavaScript가 자동으로 만들어 줍니다 -->
+    <div class="categories" id="categories" role="group" aria-label="음식 종류 선택"></div>
+
+    <button class="main-btn" id="recommendBtn" type="button">점심 메뉴 추천받기</button>
+
+    <section class="result-card" id="resultCard" aria-live="polite">
+      <p class="placeholder">오늘의 점심, 함께 골라볼까요?</p>
+    </section>
+
+    <button class="main-btn secondary hidden" id="againBtn" type="button">🔄 다시 추천</button>
+  </main>
+
+  <script>
+    // =====================================================================
+    // ✏️ [학생 수정 영역 1] 음식 종류 버튼 목록
+    //    - 버튼에 보이는 순서대로 적혀 있어요.
+    //    - '전체'는 모든 메뉴에서 추천하는 특별한 버튼이니 지우지 마세요.
+    // =====================================================================
+    const CATEGORIES = ["전체", "한식", "중식", "일식", "양식", "분식"];
+
+    // =====================================================================
+    // ✏️ [학생 수정 영역 2] 점심 메뉴 목록
+    //    - 메뉴 하나는 { name, category, emoji, desc } 묶음이에요.
+    //      name     : 메뉴 이름
+    //      category : 음식 종류 (위 CATEGORIES에 있는 이름과 똑같이 적기)
+    //      emoji    : 결과 카드에 크게 보일 이모지
+    //      desc     : 짧은 설명
+    //    - 새 메뉴를 넣고 싶으면 한 줄을 복사해서 내용만 바꾸면 돼요.
+    //    - 줄 끝의 쉼표(,)를 빼먹지 않도록 조심하세요!
+    // =====================================================================
+    const MENUS = [
+      // ----- 한식 -----
+      { name: "김치찌개",   category: "한식", emoji: "🍲", desc: "칼칼하고 얼큰한 국물에 밥 한 공기 뚝딱!" },
+      { name: "비빔밥",     category: "한식", emoji: "🥗", desc: "알록달록 나물과 고추장을 쓱쓱 비벼 먹어요." },
+      { name: "불고기",     category: "한식", emoji: "🥩", desc: "달콤 짭짤한 양념 고기는 언제나 정답이에요." },
+      { name: "된장찌개",   category: "한식", emoji: "🥘", desc: "구수한 된장 향이 마음까지 따뜻하게 해 줘요." },
+      { name: "삼계탕",     category: "한식", emoji: "🍗", desc: "든든한 보양식으로 오후 힘 충전!" },
+
+      // ----- 중식 -----
+      { name: "짜장면",     category: "중식", emoji: "🍜", desc: "고소하고 달콤한 춘장 소스의 국민 메뉴!" },
+      { name: "짬뽕",       category: "중식", emoji: "🌶️", desc: "해산물 듬뿍, 얼큰한 빨간 국물이 시원해요." },
+      { name: "탕수육",     category: "중식", emoji: "🍖", desc: "바삭한 튀김에 새콤달콤 소스를 곁들여요." },
+      { name: "볶음밥",     category: "중식", emoji: "🍛", desc: "불맛 가득 고슬고슬한 볶음밥 한 접시." },
+      { name: "마파두부",   category: "중식", emoji: "🥢", desc: "부드러운 두부와 매콤한 소스가 밥도둑이에요." },
+
+      // ----- 일식 -----
+      { name: "초밥",       category: "일식", emoji: "🍣", desc: "신선한 생선이 올라간 한입 크기의 행복." },
+      { name: "라멘",       category: "일식", emoji: "🍜", desc: "진한 국물과 쫄깃한 면발의 따끈한 한 그릇." },
+      { name: "돈가스",     category: "일식", emoji: "🍱", desc: "겉은 바삭, 속은 촉촉한 두툼한 돈가스!" },
+      { name: "우동",       category: "일식", emoji: "🍥", desc: "통통한 면발과 깔끔한 국물이 편안해요." },
+      { name: "규동",       category: "일식", emoji: "🍚", desc: "달큰한 소고기를 밥 위에 듬뿍 올린 덮밥." },
+
+      // ----- 양식 -----
+      { name: "피자",       category: "양식", emoji: "🍕", desc: "쭉 늘어나는 치즈와 함께 나눠 먹어요." },
+      { name: "햄버거",     category: "양식", emoji: "🍔", desc: "두툼한 패티와 채소를 한입 가득!" },
+      { name: "파스타",     category: "양식", emoji: "🍝", desc: "토마토, 크림, 오일 중 골라 먹는 재미." },
+      { name: "스테이크",   category: "양식", emoji: "🥩", desc: "오늘은 나를 위해 특별한 한 끼 어때요?" },
+      { name: "샌드위치",   category: "양식", emoji: "🥪", desc: "가볍고 산뜻하게 즐기는 점심." },
+
+      // ----- 분식 -----
+      { name: "떡볶이",     category: "분식", emoji: "🍢", desc: "쫄깃한 떡과 달콤 매콤한 소스의 조합!" },
+      { name: "김밥",       category: "분식", emoji: "🍙", desc: "간편하고 든든한 한 줄의 행복." },
+      { name: "라면",       category: "분식", emoji: "🍜", desc: "꼬들꼬들 면발에 계란 하나 톡!" },
+      { name: "순대",       category: "분식", emoji: "🌭", desc: "쫀득한 순대를 소금에 콕 찍어 먹어요." },
+      { name: "튀김",       category: "분식", emoji: "🍤", desc: "바삭바삭 갓 튀긴 튀김은 못 참지!" },
+    ];
+
+    // =====================================================================
+    // 아래부터는 동작 코드예요. (메뉴만 바꿀 때는 수정하지 않아도 돼요)
+    // =====================================================================
+    let selectedCategory = "전체"; // 처음 선택된 음식 종류
+    let lastMenu = null;           // 직전에 추천한 메뉴 (다시 추천 때 제외)
+
+    const categoriesEl = document.getElementById("categories");
+    const recommendBtn = document.getElementById("recommendBtn");
+    const againBtn = document.getElementById("againBtn");
+    const resultCard = document.getElementById("resultCard");
+
+    // 음식 종류 버튼 만들기
+    CATEGORIES.forEach((category) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "category-btn";
+      btn.textContent = category;
+      btn.setAttribute("aria-pressed", category === selectedCategory);
+      if (category === selectedCategory) btn.classList.add("active");
+
+      btn.addEventListener("click", () => {
+        selectedCategory = category;
+        document.querySelectorAll(".category-btn").forEach((b) => {
+          const isActive = b.textContent === category;
+          b.classList.toggle("active", isActive);
+          b.setAttribute("aria-pressed", isActive);
+        });
+      });
+
+      categoriesEl.appendChild(btn);
+    });
+
+    // 선택한 종류에서 메뉴 하나 무작위로 고르기 (직전 메뉴는 제외)
+    function pickMenu() {
+      let pool = selectedCategory === "전체"
+        ? MENUS
+        : MENUS.filter((menu) => menu.category === selectedCategory);
+
+      // 메뉴가 2개 이상이면 직전 메뉴를 빼고 고르기
+      if (pool.length > 1 && lastMenu) {
+        pool = pool.filter((menu) => menu !== lastMenu);
+      }
+
+      if (pool.length === 0) return null;
+      return pool[Math.floor(Math.random() * pool.length)];
+    }
+
+    // 결과 카드에 메뉴 보여주기
+    function showResult() {
+      const menu = pickMenu();
+      resultCard.innerHTML = "";
+
+      if (!menu) {
+        const p = document.createElement("p");
+        p.className = "placeholder";
+        p.textContent = "이 종류에는 아직 메뉴가 없어요. 메뉴 목록을 확인해 주세요!";
+        resultCard.appendChild(p);
+      } else {
+        lastMenu = menu;
+        resultCard.innerHTML = `
+          <div class="result-emoji" aria-hidden="true"></div>
+          <span class="result-tag"></span>
+          <h2 class="result-name"></h2>
+          <p class="result-desc"></p>
+        `;
+        resultCard.querySelector(".result-emoji").textContent = menu.emoji;
+        resultCard.querySelector(".result-tag").textContent = menu.category;
+        resultCard.querySelector(".result-name").textContent = menu.name;
+        resultCard.querySelector(".result-desc").textContent = menu.desc;
+      }
+
+      // 애니메이션 다시 시작하기
+      resultCard.classList.remove("pop");
+      void resultCard.offsetWidth;
+      resultCard.classList.add("pop");
+
+      againBtn.classList.remove("hidden");
+    }
+
+    recommendBtn.addEventListener("click", showResult);
+    againBtn.addEventListener("click", showResult);
+  </script>
+</body>
+</html>
